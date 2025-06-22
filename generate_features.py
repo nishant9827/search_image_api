@@ -23,10 +23,17 @@ def extract_features_from_url(url):
 
 # Connect to MySQL database
 conn = mysql.connector.connect(
+<<<<<<< HEAD
     host='srv1558.hstgr.io',
     user='u903684843_dabramart',
     password='jY[r0g@8',
     database='u903684843_dabramart'
+=======
+    host=os.environ.get('DB_HOST'),
+    user=os.environ.get('DB_USER'),
+    password=os.environ.get('DB_PASS'),
+    database=os.environ.get('DB_NAME')
+>>>>>>> abbfab07fcc85f47b966529eb6fcf062acee10c9
 )
 cursor = conn.cursor()
 cursor.execute("SELECT product_id, product_image, product_image2, product_image3 FROM product_items")

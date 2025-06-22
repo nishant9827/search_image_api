@@ -1,0 +1,5 @@
+flask
+numpy
+pillow
+faiss-cpu
+tensorflow-cpu==2.11.0
