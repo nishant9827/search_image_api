@@ -1,5 +1,6 @@
 flask
-numpy
-pillow
+torch
+torchvision
 faiss-cpu
-tensorflow-cpu==2.11.0
+numpy
+Pillow

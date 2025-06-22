@@ -1,26 +1,38 @@
 from flask import Flask, request, jsonify
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 import faiss
 import os
 import traceback
+import torch
+import torchvision.transforms as transforms
+from torchvision.models import mobilenet_v2
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load model
-model = tf.keras.applications.MobileNetV2(weights='imagenet', include_top=False, pooling='avg')
+# Load PyTorch MobileNetV2 model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = mobilenet_v2(pretrained=True)
+model.classifier = torch.nn.Identity()  # Remove classification head
+model.eval()
+model.to(device)
 
+# Image preprocessor
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+])
+
+# Load features
 try:
     product_ids = np.load('product_ids.npy')
-    features_db = np.load('features_db.npy')
+    features_db = np.load('features_db.npy').astype(np.float32)
 
-    # Ensure features and IDs match
     assert features_db.shape[0] == product_ids.shape[0], "Mismatch in features and product IDs"
 
-    # Create FAISS index
     index = faiss.IndexFlatL2(features_db.shape[1])
     index.add(features_db)
 except Exception as e:
@@ -29,11 +41,12 @@ except Exception as e:
 
 def extract_features(image_path):
     try:
-        img = Image.open(image_path).resize((224, 224)).convert('RGB')
-        x = tf.keras.preprocessing.image.img_to_array(img)
-        x = tf.keras.applications.mobilenet_v2.preprocess_input(np.expand_dims(x, axis=0))
-        features = model.predict(x)[0]
-        return features
+        img = Image.open(image_path).convert('RGB')
+        img_tensor = transform(img).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            features = model(img_tensor).cpu().numpy()[0]
+        return features.astype(np.float32)
     except Exception as e:
         print("❌ Error in feature extraction:", e)
         traceback.print_exc()
